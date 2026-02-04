@@ -22,7 +22,6 @@ public class Main {
         try {
             System.out.println(" HOTEL RESERVATION SYSTEM ");
 
-            // guest
             Guest guest = new Guest("Olivia Rare", "rare@mail.com");
             int guestId;
             try {
@@ -83,7 +82,8 @@ public class Main {
         } catch (InvalidDateRangeException | RoomNotAvailableException | PaymentDeclinedException e) {
             System.out.println("BUSINESS ERROR: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("ERROR: " + e.getMessage());
+            System.out.println("\nERROR: " + e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

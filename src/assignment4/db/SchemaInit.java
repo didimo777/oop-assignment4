@@ -28,6 +28,10 @@ public final class SchemaInit {
                     room_type TEXT NOT NULL DEFAULT 'STANDARD'
                 )
             """);
+            st.executeUpdate("""
+                    ALTER TABLE rooms
+                    ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) NOT NULL DEFAULT 0
+            """);
             st.executeUpdate("CREATE UNIQUE INDEX IF NOT EXISTS rooms_number_uq ON rooms(number)");
 
             st.executeUpdate("""
