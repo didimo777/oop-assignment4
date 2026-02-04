@@ -4,7 +4,7 @@ import assignment4.entities.Guest;
 import java.util.Optional;
 
 public interface GuestRepository {
-    void save(Guest guest);
+    int save(Guest guest);                 // returns generated id
     Optional<Guest> findById(int id);
     Optional<Guest> findByEmail(String email);
 }

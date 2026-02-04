@@ -9,14 +9,18 @@ import java.util.Optional;
 public class GuestRepositoryImpl implements GuestRepository {
 
     @Override
-    public void save(Guest guest) {
-        String sql = "INSERT INTO guests(name, email) VALUES (?, ?)";
+    public int save(Guest guest) {
+        String sql = "INSERT INTO guests(name, email) VALUES (?, ?) RETURNING id";
         try (Connection c = DatabaseConnection.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
 
             ps.setString(1, guest.getName());
             ps.setString(2, guest.getEmail());
-            ps.executeUpdate();
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+            throw new SQLException("No id returned");
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -30,14 +34,14 @@ public class GuestRepositoryImpl implements GuestRepository {
              PreparedStatement ps = c.prepareStatement(sql)) {
 
             ps.setInt(1, id);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                return Optional.of(
-                        new Guest(rs.getInt("id"),
-                                rs.getString("name"),
-                                rs.getString("email"))
-                );
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new Guest(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getString("email")
+                    ));
+                }
             }
             return Optional.empty();
 
@@ -53,13 +57,14 @@ public class GuestRepositoryImpl implements GuestRepository {
              PreparedStatement ps = c.prepareStatement(sql)) {
 
             ps.setString(1, email);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return Optional.of(
-                        new Guest(rs.getInt("id"),
-                                rs.getString("name"),
-                                rs.getString("email"))
-                );
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new Guest(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getString("email")
+                    ));
+                }
             }
             return Optional.empty();
 

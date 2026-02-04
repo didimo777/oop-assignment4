@@ -1,11 +1,18 @@
+import assignment4.db.SchemaInit;
 import assignment4.entities.*;
+import assignment4.exceptions.*;
+import assignment4.patterns.PricingPolicy;
+import assignment4.patterns.ReservationDetails;
 import assignment4.services.*;
+import assignment4.util.SearchResult;
 
 import java.time.LocalDate;
 
 public class Main {
 
     public static void main(String[] args) {
+
+        SchemaInit.ensureSchema();
 
         GuestService guestService = new GuestService();
         ReservationService reservationService = new ReservationService();
@@ -15,43 +22,68 @@ public class Main {
         try {
             System.out.println(" HOTEL RESERVATION SYSTEM ");
 
-            // 1. Register guest (will NOT duplicate)
+            // guest
             Guest guest = new Guest("Olivia Rare", "rare@mail.com");
+            int guestId;
             try {
-                guestService.registerGuest(guest);
-                System.out.println("Guest registered");
+                guestId = guestService.registerGuest(guest); // сделай чтобы возвращал id (см ниже)
             } catch (RuntimeException e) {
-                System.out.println("Guest already exists, skipping creation");
+                guestId = guestService.findGuestIdByEmail(guest.getEmail()); // сделай метод (см ниже)
             }
 
+            LocalDate start = LocalDate.now().plusDays(1);
+            LocalDate end = LocalDate.now().plusDays(3);
+
+            SearchResult<Room> available = roomService.searchAvailableRooms(start, end);
 
             System.out.println("\nAvailable rooms:");
-            roomService.getAllRooms()
-                    .forEach(r ->
-                            System.out.println("Room #" + r.getNumber())
-                    );
-
-            int guestId = 1;
-            int roomId = 1;
-
-            // 3. Create reservation
-            Reservation reservation = new Reservation(
-                    guestId,
-                    roomId,
-                    LocalDate.now().plusDays(1),
-                    LocalDate.now().plusDays(3)
+            available.getItems().forEach(r ->
+                    System.out.println(r.getId() + " | " + r.getNumber() + " | " + r.getType())
             );
 
-            reservationService.createReservation(reservation);
-            System.out.println("\nReservation created successfully");
+            if (available.getItems().isEmpty()) {
+                System.out.println("No rooms available.");
+                return;
+            }
 
+            Room chosen = available.getItems().get(0);
+
+            // pricing singleton usage
+            double pricePerNight = PricingPolicy.getInstance().pricePerNight(chosen.getType(), start);
+            long nights = java.time.temporal.ChronoUnit.DAYS.between(start, end);
+            double amount = pricePerNight * nights;
+
+            // builder usage
+            ReservationDetails details = ReservationDetails.builder()
+                    .guestId(guestId)
+                    .roomId(chosen.getId())
+                    .roomType(chosen.getType())
+                    .startDate(start)
+                    .endDate(end)
+                    .breakfast(true)
+                    .amount(amount)
+                    .build();
+
+            // create reservation (Milestone 1)
+            int reservationId = reservationService.createReservation(
+                    new Reservation(details.getGuestId(), details.getRoomId(), details.getStartDate(), details.getEndDate())
+            );
+            System.out.println("\nReservation created: id=" + reservationId);
+
+            // payment (Milestone 1)
+            int paymentId = paymentService.processPayment(new Payment(reservationId, details.getAmount(), "PAID"));
+            System.out.println("Payment created: id=" + paymentId);
+
+            // cancel demo (Milestone 1)
+            reservationService.cancelReservation(reservationId);
+            System.out.println("Reservation cancelled: id=" + reservationId);
 
             System.out.println("\n=== DEMO FINISHED ===");
 
+        } catch (InvalidDateRangeException | RoomNotAvailableException | PaymentDeclinedException e) {
+            System.out.println("BUSINESS ERROR: " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("\nERROR:");
-            System.out.println(e.getMessage());
+            System.out.println("ERROR: " + e.getMessage());
         }
     }
 }
-
