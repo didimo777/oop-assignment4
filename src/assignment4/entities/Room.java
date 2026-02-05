@@ -17,4 +17,7 @@ public class Room {
     public String getNumber() { return number; }
     public boolean isAvailable() { return available; }
     public RoomType getType() { return type; }
+
+    public double getBasePrice() { return getBasePrice();
+    }
 }
