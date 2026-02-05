@@ -47,12 +47,9 @@ public class Main {
 
             Room chosen = available.getItems().get(0);
 
-            // pricing singleton usage
             double pricePerNight = PricingPolicy.getInstance().pricePerNight(chosen.getType(), start);
             long nights = java.time.temporal.ChronoUnit.DAYS.between(start, end);
             double amount = pricePerNight * nights;
-
-            // builder usage
             ReservationDetails details = ReservationDetails.builder()
                     .guestId(guestId)
                     .roomId(chosen.getId())
@@ -63,17 +60,17 @@ public class Main {
                     .amount(amount)
                     .build();
 
-            // create reservation (Milestone 1)
+
             int reservationId = reservationService.createReservation(
                     new Reservation(details.getGuestId(), details.getRoomId(), details.getStartDate(), details.getEndDate())
             );
             System.out.println("\nReservation created: id=" + reservationId);
 
-            // payment (Milestone 1)
+
             int paymentId = paymentService.processPayment(new Payment(reservationId, details.getAmount(), "PAID"));
             System.out.println("Payment created: id=" + paymentId);
 
-            // cancel demo (Milestone 1)
+
             reservationService.cancelReservation(reservationId);
             System.out.println("Reservation cancelled: id=" + reservationId);
 
