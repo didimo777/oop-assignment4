@@ -15,6 +15,7 @@ public final class PricingPolicy {
 
     public double pricePerNight(RoomType type, LocalDate date) {
         // минимальная логика для демонстрации singleton
+        //consistent across the whole application
         return switch (type) {
             case STANDARD -> 50.0;
             case SUITE -> 120.0;

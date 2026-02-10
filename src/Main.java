@@ -1,12 +1,16 @@
+import assignment4.components.accounting.AccountingComponent;
+import assignment4.components.reservation.ReservationComponent;
+import assignment4.components.room.RoomManagementComponent;
 import assignment4.db.SchemaInit;
 import assignment4.entities.*;
-import assignment4.exceptions.*;
-import assignment4.patterns.PricingPolicy;
+import assignment4.exceptions.InvalidDateRangeException;
+import assignment4.exceptions.PaymentDeclinedException;
+import assignment4.exceptions.RoomNotAvailableException;
 import assignment4.patterns.ReservationDetails;
-import assignment4.services.*;
 import assignment4.util.SearchResult;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class Main {
 
@@ -14,26 +18,20 @@ public class Main {
 
         SchemaInit.ensureSchema();
 
-        GuestService guestService = new GuestService();
-        ReservationService reservationService = new ReservationService();
-        PaymentService paymentService = new PaymentService();
-        RoomAvailabilityService roomService = new RoomAvailabilityService();
+        RoomManagementComponent roomComponent = new RoomManagementComponent();
+        ReservationComponent reservationComponent = new ReservationComponent();
+        AccountingComponent accountingComponent = new AccountingComponent();
 
         try {
             System.out.println(" HOTEL RESERVATION SYSTEM ");
 
             Guest guest = new Guest("Olivia Rare", "rare@mail.com");
-            int guestId;
-            try {
-                guestId = guestService.registerGuest(guest); // сделай чтобы возвращал id (см ниже)
-            } catch (RuntimeException e) {
-                guestId = guestService.findGuestIdByEmail(guest.getEmail()); // сделай метод (см ниже)
-            }
+            int guestId = reservationComponent.getOrCreateGuestId(guest);
 
             LocalDate start = LocalDate.now().plusDays(1);
             LocalDate end = LocalDate.now().plusDays(3);
 
-            SearchResult<Room> available = roomService.searchAvailableRooms(start, end);
+            SearchResult<Room> available = roomComponent.searchAvailableRooms(start, end);
 
             System.out.println("\nAvailable rooms:");
             available.getItems().forEach(r ->
@@ -47,9 +45,9 @@ public class Main {
 
             Room chosen = available.getItems().get(0);
 
-            double pricePerNight = PricingPolicy.getInstance().pricePerNight(chosen.getType(), start);
-            long nights = java.time.temporal.ChronoUnit.DAYS.between(start, end);
-            double amount = pricePerNight * nights;
+            long nights = ChronoUnit.DAYS.between(start, end);
+            double amount = accountingComponent.pricePerNight(chosen.getType(), start) * nights;
+
             ReservationDetails details = ReservationDetails.builder()
                     .guestId(guestId)
                     .roomId(chosen.getId())
@@ -60,18 +58,17 @@ public class Main {
                     .amount(amount)
                     .build();
 
-
-            int reservationId = reservationService.createReservation(
+            int reservationId = reservationComponent.createReservation(
                     new Reservation(details.getGuestId(), details.getRoomId(), details.getStartDate(), details.getEndDate())
             );
             System.out.println("\nReservation created: id=" + reservationId);
 
-
-            int paymentId = paymentService.processPayment(new Payment(reservationId, details.getAmount(), "PAID"));
+            int paymentId = accountingComponent.processPayment(
+                    new Payment(reservationId, details.getAmount(), "PAID")
+            );
             System.out.println("Payment created: id=" + paymentId);
 
-
-            reservationService.cancelReservation(reservationId);
+            reservationComponent.cancelReservation(reservationId);
             System.out.println("Reservation cancelled: id=" + reservationId);
 
             System.out.println("\n=== DEMO FINISHED ===");
