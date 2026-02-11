@@ -8,4 +8,11 @@ public interface GenericRepository<T, ID> {
     Optional<T> findById(ID id);
     List<T> findAll();
     void deleteById(ID id);
+
+    default boolean existsById(ID id) {
+        return findById(id).isPresent();
+    }
+    static boolean isValidId(int id) {
+        return id > 0;
+    }
 }
